@@ -21,8 +21,8 @@ public class Constants {
   public static final String tooManyCars = "Our Rental Service Already Has Too Many Cars of" +
           " The Type: ";
 
-  public static final String nothingAvailable = "There are no cars available of the type you chose for"+
-          " the given start and end date. Either pick a different type of car," +
+  public static final String nothingAvailable = "There are no cars available of the type you" +
+          " chose for the given start and end date. Either pick a different type of car," +
           " or choose new times.";
 
   public static final String invalidTimes = "Cannot Reserve a Car With End Time Before the Start" +

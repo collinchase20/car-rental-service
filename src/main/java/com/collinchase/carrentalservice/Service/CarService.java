@@ -26,10 +26,13 @@ public class CarService {
 
 
   // Add a new Car to our Lot of Cars
-  public void addNewCar(String type) {
+  public void addNewCar(String type) throws Exception {
     if (this.canAddCarOfType(type)) {
       Car newCar = new Car(type);
       carRepository.save(newCar);
+    }
+    else {
+      throw new Exception (Constants.tooManyCars + type);
     }
   }
 

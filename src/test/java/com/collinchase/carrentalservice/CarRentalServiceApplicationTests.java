@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 // initially populated with the data.sql file under resources.
 
 @RunWith(SpringRunner.class)
-@DataJpaTest(includeFilters = @ComponentScan.Filter(type = FilterType.ANNOTATION, classes = {Controller.class, Service.class}))
+@DataJpaTest(includeFilters = @ComponentScan.Filter(type = FilterType.ANNOTATION,
+        classes = {Controller.class, Service.class}))
 public class CarRentalServiceApplicationTests {
 
 	@Autowired
@@ -34,7 +35,7 @@ public class CarRentalServiceApplicationTests {
 	private SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy hh:mm:ss");
 
   @Test
-  public void testAddCar() {
+  public void testAddCar() throws Exception {
     //Note that our database is initialized with 8 cars of each type in data.sql
     carRentalServiceController.addNewCar(Constants.sedan);
     List<Car> sedanCars = carRentalServiceController.getAllCarsOfType(Constants.sedan);
@@ -68,7 +69,7 @@ public class CarRentalServiceApplicationTests {
   }
 
   @Test
-  public void testRemoveCarAndItsReservations() throws Exception {
+  public void testRemoveCarWithReservations() throws Exception {
     Date startDate = formatter.parse("08-02-2022 08:30:00");
     Date endDate = formatter.parse("10-02-2022 08:30:00");
     carRentalServiceController.reserveCar(startDate, endDate, Constants.van);
@@ -88,32 +89,39 @@ public class CarRentalServiceApplicationTests {
   }
 
 	@Test
-	public void testCannotAddMoreThanLimitOfAnyCar() {
+	public void testCannotAddMoreThanLimitOfAnyCar() throws Exception {
     carRentalServiceController.addNewCar(Constants.sedan);
     carRentalServiceController.addNewCar(Constants.sedan);
-    carRentalServiceController.addNewCar(Constants.sedan);
+    Exception thrown = assertThrows(Exception.class, () -> {
+      carRentalServiceController.addNewCar(Constants.sedan);
+    });
 		List<Car> sedanCars = carRentalServiceController.getAllCarsOfType(Constants.sedan);
 		assert(sedanCars.size() == 10);
+    assertTrue(thrown.getMessage().contains(Constants.tooManyCars));
 
     carRentalServiceController.addNewCar(Constants.van);
     carRentalServiceController.addNewCar(Constants.van);
-    carRentalServiceController.addNewCar(Constants.van);
+    Exception thrown2 = assertThrows(Exception.class, () -> {
+      carRentalServiceController.addNewCar(Constants.van);
+    });
 		List<Car> vanCars = carRentalServiceController.getAllCarsOfType(Constants.van);
 		assert(vanCars.size() == 10);
+    assertTrue(thrown2.getMessage().contains(Constants.tooManyCars));
 
     carRentalServiceController.addNewCar(Constants.suv);
     carRentalServiceController.addNewCar(Constants.suv);
-    carRentalServiceController.addNewCar(Constants.suv);
+    Exception thrown3 = assertThrows(Exception.class, () -> {
+      carRentalServiceController.addNewCar(Constants.suv);
+    });
 		List<Car> suvCars = carRentalServiceController.getAllCarsOfType(Constants.suv);
 		assert(suvCars.size() == 10);
+    assertTrue(thrown3.getMessage().contains(Constants.tooManyCars));
 	}
 
 	@Test
 	public void testCreateReservation() throws Exception {
-		String startDateString = "08-02-2022 08:30:00";
-		String endDateString = "10-02-2022 08:30:00";
-		Date startDate = formatter.parse(startDateString);
-		Date endDate = formatter.parse(endDateString);
+		Date startDate = formatter.parse("08-02-2022 08:30:00");
+		Date endDate = formatter.parse("10-02-2022 08:30:00");
 		carRentalServiceController.reserveCar(startDate, endDate, Constants.sedan);
     carRentalServiceController.reserveCar(startDate, endDate, Constants.van);
     carRentalServiceController.reserveCar(startDate, endDate, Constants.suv);
@@ -124,21 +132,18 @@ public class CarRentalServiceApplicationTests {
 
   @Test
   public void testCannotCreateOverlappingResveration() throws Exception {
-    String startDateString = "08-02-2022 08:30:00";
-    String endDateString = "10-02-2022 08:30:00";
-    Date startDate = formatter.parse(startDateString);
-    Date endDate = formatter.parse(endDateString);
+    Date startDate = formatter.parse("08-02-2022 08:30:00");
+    Date endDate = formatter.parse("10-02-2022 08:30:00");
     //Reserve All 8 Of Our Sedans For the Above TimeFrame
     for (int i = 0; i <= 7; i++) {
       carRentalServiceController.reserveCar(startDate, endDate, Constants.sedan);
     }
     //Try And Reserve a Sedan Overlapping This Time
-    String overLappingStartDateString = "09-02-2022 08:30:00";
-    String overLappingEndDateString = "11-02-2022 08:30:00";
-    Date overLappingStartDate = formatter.parse(overLappingStartDateString);
-    Date overLappingEndDate = formatter.parse(overLappingEndDateString);
+    Date overLappingStartDate = formatter.parse("09-02-2022 08:30:00");
+    Date overLappingEndDate = formatter.parse("11-02-2022 08:30:00");
     Exception thrown = assertThrows(Exception.class, () -> {
-      carRentalServiceController.reserveCar(overLappingStartDate, overLappingEndDate, Constants.sedan);
+      carRentalServiceController.reserveCar(overLappingStartDate,
+              overLappingEndDate, Constants.sedan);
     });
     assertTrue(thrown.getMessage().contains(Constants.nothingAvailable));
   }
@@ -168,5 +173,41 @@ public class CarRentalServiceApplicationTests {
 
 		assertTrue(thrown.getMessage().contains(Constants.invalidTimes));
 	}
+
+  @Test
+  public void testCreateReservationStartTimeEqualsExistingEndTime() throws Exception {
+    Date startDate = formatter.parse("08-02-2022 08:30:00");
+    Date endDate = formatter.parse("10-02-2022 08:30:00");
+    //Reserve All 8 Of Our Sedans For the Above TimeFrame
+    for (int i = 0; i <= 7; i++) {
+      carRentalServiceController.reserveCar(startDate, endDate, Constants.sedan);
+    }
+    //Try And Reserve a Sedan To Start At the EndTime of the above reservations.
+    //I designed the code for this to work considering if someone returns a car at 8:30 am someone
+    //else should be able to reserve that car starting right away.
+    Date startDateSameAsEndDate = formatter.parse("10-02-2022 08:30:00");
+    Date someEndDate = formatter.parse("20-02-2022 011:45:00");
+
+    carRentalServiceController.reserveCar(startDateSameAsEndDate, someEndDate, Constants.sedan);
+
+    List<Reservation> reservations = carRentalServiceController.getAllReservations();
+    assert(reservations.size() == 9);
+  }
+
+  @Test
+  public void testCreateReservationAndAddNewCar() throws Exception {
+    Date startDate = formatter.parse("08-02-2022 08:30:00");
+    Date endDate = formatter.parse("10-02-2022 08:30:00");
+    //Reserve All 8 Of Our Sedans For the Above TimeFrame
+    for (int i = 0; i <= 7; i++) {
+      carRentalServiceController.reserveCar(startDate, endDate, Constants.sedan);
+    }
+    //Add a new Sedan to our Lot
+    carRentalServiceController.addNewCar(Constants.sedan);
+    //Now that there is a 9th sedan in our lot should be able to reserve it for the above time.
+    carRentalServiceController.reserveCar(startDate, endDate, Constants.sedan);
+    List<Reservation> reservations = carRentalServiceController.getAllReservations();
+    assert(reservations.size() == 9);
+  }
 
 }

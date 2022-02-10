@@ -27,11 +27,8 @@ public class CarRentalServiceController {
     reservationService.tryAndReserveCar(startTime, endTime, type);
   }
 
-  public void deleteReservation(long reservationId) {
-    reservationService.deleteReservation(reservationId);
-  }
 
-  public void addNewCar(String type) {
+  public void addNewCar(String type) throws Exception {
     carService.addNewCar(type);
   }
 
@@ -44,9 +41,6 @@ public class CarRentalServiceController {
     return carService.getCarsOfType(type);
   }
 
-  public List<Reservation> getAllReservationsForCar(long carId) {
-    return reservationService.getAllResvervationsForCar(carId);
-  }
 
   public List<Reservation> getAllReservations() {
     return reservationService.getAllReservations();
